@@ -55,6 +55,7 @@ public class GestorLogin {
             }
         } catch (Exception e) {
             // Si ocurre un error al conectar a la base de datos, muestra un mensaje de error
+        	  e.printStackTrace();
             vista.showErrorMessage("Error al conectarse a la base de datos: " + e.getMessage());
             return false;
         } finally {
