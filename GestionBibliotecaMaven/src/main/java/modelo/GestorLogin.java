@@ -2,6 +2,7 @@ package modelo;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
 import org.hibernate.query.Query;
 import javax.swing.*;
 import Vista.VistaLogin;
@@ -12,9 +13,14 @@ public class GestorLogin {
 
     private SessionFactory sessionFactory; // Para manejar la creación de sesiones
 
-    // Constructor que recibe el SessionFactory
-    public GestorLogin(SessionFactory sessionFactory) {
-        this.sessionFactory = sessionFactory;
+    // Constructor que inicializa el SessionFactory
+    public GestorLogin() {
+        try {
+            // Configura y construye el SessionFactory
+            sessionFactory = new Configuration().configure("hibernate.cfg.xml").buildSessionFactory();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al configurar Hibernate: " + e.getMessage(), e);
+        }
     }
 
     public boolean validateCredentials(String email, String password, VistaLogin vista) {
@@ -56,38 +62,16 @@ public class GestorLogin {
                 session.close(); // Cierra la sesión de Hibernate
             }
         }
-
-        // Código viejo con JDBC (comentado para referencia futura)
-        /*
-        try (Connection connection = new Db().getConnection();
-             PreparedStatement ps = connection.prepareStatement("SELECT Nombre, Apellidos, Email, Rol FROM usuarios WHERE Email = ? AND password = ?")) {
-            
-            ps.setString(1, email);
-            ps.setString(2, password);
-            
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    String role = rs.getString("Rol");
-                    String emailUser = rs.getString("Email");
-                    String nombreCompleto = rs.getString("Nombre") + " " + rs.getString("Apellidos");
-                    
-                    // Close the login window and open the main menu based on role
-                    vista.dispose();
-                    openMainMenu(role.equals("Administrador"), nombreCompleto, emailUser);
-                    return true;
-                } else {
-                    vista.showErrorMessage("Credenciales incorrectas.");
-                    return false;
-                }
-            }
-        } catch (Exception e) {
-            vista.showErrorMessage("Error al conectarse a la base de datos: " + e.getMessage());
-            return false;
-        }
-        */
     }
 
     private void openMainMenu(boolean isAdmin, String nombreCompleto, String emailUser) {
         SwingUtilities.invokeLater(() -> new MenuPrincipal(isAdmin, nombreCompleto, emailUser).setVisible(true));
+    }
+
+    // Método para cerrar el SessionFactory al finalizar la aplicación
+    public void closeSessionFactory() {
+        if (sessionFactory != null) {
+            sessionFactory.close();
+        }
     }
 }
