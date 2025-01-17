@@ -408,4 +408,3 @@ public class VistaLogin extends JFrame {
         }
     }
 }
-

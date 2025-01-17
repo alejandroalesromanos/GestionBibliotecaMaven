@@ -30,7 +30,7 @@ public class GestorLogin {
             session = sessionFactory.openSession();
 
             // Utiliza HQL para buscar el usuario por email y contraseña
-            String hql = "FROM Usuario WHERE email = :email AND password = :password";
+            String hql = "FROM Usuario u WHERE u.email = :email AND u.password = :password";
             Query<Usuario> query = session.createQuery(hql, Usuario.class);
             query.setParameter("email", email);
             query.setParameter("password", password);
@@ -40,13 +40,13 @@ public class GestorLogin {
 
             if (usuario != null) {
                 // Si se encuentra el usuario, se obtiene la información
-                Rol role = usuario.getRol();
+                Rol role = usuario.getRol(); // Suponiendo que getRol() retorna un enum o cadena
                 String emailUser = usuario.getEmail();
                 String nombreCompleto = usuario.getNombre() + " " + usuario.getApellidos();
 
                 // Cierra la ventana de login y abre el menú principal según el rol
                 vista.dispose();
-                openMainMenu(role.equals("Administrador"), nombreCompleto, emailUser);
+                openMainMenu(role.name().equalsIgnoreCase("Administrador"), nombreCompleto, emailUser);
                 return true;
             } else {
                 // Si no se encuentra el usuario, muestra un mensaje de error
@@ -55,7 +55,7 @@ public class GestorLogin {
             }
         } catch (Exception e) {
             // Si ocurre un error al conectar a la base de datos, muestra un mensaje de error
-        	  e.printStackTrace();
+            e.printStackTrace();
             vista.showErrorMessage("Error al conectarse a la base de datos: " + e.getMessage());
             return false;
         } finally {
