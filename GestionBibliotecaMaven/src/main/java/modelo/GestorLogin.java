@@ -23,6 +23,32 @@ public class GestorLogin {
         }
     }
 
+    // Método para validar credenciales usando un SwingWorker para no bloquear la UI
+    public void validateCredentialsAsync(String email, String password, VistaLogin vista) {
+        // Creamos un SwingWorker para manejar la validación de credenciales en segundo plano
+        SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() throws Exception {
+                return validateCredentials(email, password, vista);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    if (get()) {
+                        // Si las credenciales son correctas, ya se realizó la transición en el hilo de fondo
+                    } else {
+                        // Si las credenciales son incorrectas, ya se mostró el mensaje de error
+                    }
+                } catch (Exception e) {
+                    vista.showErrorMessage("Error inesperado.");
+                }
+            }
+        };
+        worker.execute();  // Ejecuta el SwingWorker
+    }
+
+    // Método de validación de credenciales
     public boolean validateCredentials(String email, String password, VistaLogin vista) {
         Session session = null;
         try {
@@ -45,18 +71,20 @@ public class GestorLogin {
                 String nombreCompleto = usuario.getNombre() + " " + usuario.getApellidos();
 
                 // Cierra la ventana de login y abre el menú principal según el rol
-                vista.dispose();
-                openMainMenu(role.name().equalsIgnoreCase("Administrador"), nombreCompleto, emailUser);
+                SwingUtilities.invokeLater(() -> {
+                    vista.dispose();
+                    openMainMenu(role.name().equalsIgnoreCase("Administrador"), nombreCompleto, emailUser);
+                });
                 return true;
             } else {
                 // Si no se encuentra el usuario, muestra un mensaje de error
-                vista.showErrorMessage("Credenciales incorrectas.");
+                SwingUtilities.invokeLater(() -> vista.showErrorMessage("Credenciales incorrectas."));
                 return false;
             }
         } catch (Exception e) {
             // Si ocurre un error al conectar a la base de datos, muestra un mensaje de error
             e.printStackTrace();
-            vista.showErrorMessage("Error al conectarse a la base de datos: " + e.getMessage());
+            SwingUtilities.invokeLater(() -> vista.showErrorMessage("Error al conectarse a la base de datos: " + e.getMessage()));
             return false;
         } finally {
             if (session != null) {
@@ -65,7 +93,8 @@ public class GestorLogin {
         }
     }
 
-    private void openMainMenu(boolean isAdmin, String nombreCompleto, String emailUser) {
+    // Método para abrir el menú principal
+    public void openMainMenu(boolean isAdmin, String nombreCompleto, String emailUser) {
         SwingUtilities.invokeLater(() -> new MenuPrincipal(isAdmin, nombreCompleto, emailUser).setVisible(true));
     }
 

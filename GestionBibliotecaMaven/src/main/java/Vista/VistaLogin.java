@@ -68,6 +68,7 @@ public class VistaLogin extends JFrame {
     }
 
     private void revalidateLayout() {
+        // Eliminar revalidaciones y repintados innecesarios
         int width = getWidth();
         
         int titleFontSize = Math.max(24, Math.min(32, width / 15));
@@ -77,9 +78,7 @@ public class VistaLogin extends JFrame {
         int fieldWidth = Math.max(200, Math.min(300, width - 100));
         
         updateComponentSizes(fieldWidth, titleFontSize, fieldFontSize, buttonFontSize);
-        
         contentPanel.revalidate();
-        contentPanel.repaint();
     }
 
     private void updateComponentSizes(int fieldWidth, int titleFontSize, int fieldFontSize, int buttonFontSize) {
@@ -108,6 +107,7 @@ public class VistaLogin extends JFrame {
         loginButton.setMaximumSize(buttonDimension);
         loginButton.setFont(new Font("Segoe UI", Font.BOLD, buttonFontSize));
     }
+
 
     private JPanel createContentPanel() {
         JPanel panel = new JPanel();
@@ -337,9 +337,10 @@ public class VistaLogin extends JFrame {
     }
 
     private void handleLogin() {
-        String email = emailField.getText();
+    	String email = emailField.getText();
         String password = new String(passwordField.getPassword());
 
+        // Validación más ligera para evitar llamadas a la base de datos
         if (email.equals("Ingrese su correo electrónico") || 
             password.equals("Ingrese su contraseña")) {
             showErrorMessage("Por favor, complete todos los campos.");
@@ -356,14 +357,38 @@ public class VistaLogin extends JFrame {
             return;
         }
 
-        GestorLogin gestionLogin = new GestorLogin();
-        boolean valid = gestionLogin.validateCredentials(email, password, this);
+        // Crear y mostrar la ventana de carga
+        PantallaCarga loadingFrame = new PantallaCarga();
+        loadingFrame.setVisible(true);
 
-        if (valid) {
-            this.dispose();
-        } else {
-            showErrorMessage("Credenciales incorrectas, por favor intente nuevamente.");
-        }
+        // Ejecutar la validación en segundo plano
+        SwingWorker<Boolean, Void> loginTask = new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() {
+                GestorLogin gestionLogin = new GestorLogin();
+                return gestionLogin.validateCredentials(email, password, VistaLogin.this);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    boolean valid = get();
+                    if (valid) {
+                        loadingFrame.dispose();
+                        dispose();  // Cerrar la ventana de login
+                    } else {
+                        loadingFrame.dispose();
+                        showErrorMessage("Credenciales incorrectas, por favor intente nuevamente.");
+                    }
+                } catch (Exception e) {
+                    loadingFrame.dispose();
+                    showErrorMessage("Error al realizar la operación.");
+                }
+            }
+        };
+
+        // Ejecutar la tarea en segundo plano
+        loginTask.execute();
     }
 
     public void showErrorMessage(String message) {

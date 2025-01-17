@@ -3,7 +3,10 @@ package Vista;
 import java.awt.*;
 import java.sql.*;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
+
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -15,6 +18,8 @@ public class VistaPrestamos extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private JTable prestamosTable;
 	private DefaultTableModel tableModel;
+	private static Map<Integer, Queue<String>> listaEspera = new HashMap<>();
+
 
 	public VistaPrestamos(boolean isAdmin, String currentUser, String emailUser) {
 		setTitle("Vista de Préstamos");
@@ -107,6 +112,8 @@ public class VistaPrestamos extends JFrame {
 		fondoPanel.add(buttonPanel, BorderLayout.EAST);
 		loadPrestamos("ALL", isAdmin, emailUser);
 	}
+	
+
 
 	private JButton createStyledButton(String text, java.awt.event.ActionListener action) {
 		JButton button = new JButton(text);
@@ -189,19 +196,18 @@ public class VistaPrestamos extends JFrame {
 	    JDialog dialog = new JDialog(this, "Reservar Libro", true);
 	    dialog.setLayout(new GridBagLayout());
 	    GridBagConstraints gbc = new GridBagConstraints();
-	    dialog.setSize(400, 250); // Tamaño del cuadro de diálogo
+	    dialog.setSize(400, 250);
 	    dialog.setLocationRelativeTo(this);
 
 	    JLabel libroLabel = new JLabel("Selecciona un libro:");
 	    JComboBox<String> libroComboBox = new JComboBox<>();
-	    libroComboBox.setPreferredSize(new Dimension(200, 25)); // Ajuste del tamaño
+	    libroComboBox.setPreferredSize(new Dimension(200, 25));
 	    Map<String, Integer> libroMap = new HashMap<>();
 
 	    try (Connection connection = new Db().getConnection()) {
-	        String query = "SELECT ID, Titulo FROM libros WHERE Disponibilidad = 1";
+	        String query = "SELECT ID, Titulo, Disponibilidad FROM libros";
 	        try (PreparedStatement statement = connection.prepareStatement(query);
 	             ResultSet resultSet = statement.executeQuery()) {
-
 	            while (resultSet.next()) {
 	                String titulo = resultSet.getString("Titulo");
 	                int id = resultSet.getInt("ID");
@@ -210,7 +216,7 @@ public class VistaPrestamos extends JFrame {
 	            }
 	        }
 	    } catch (SQLException ex) {
-	        JOptionPane.showMessageDialog(dialog, "Error al cargar los libros disponibles: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+	        JOptionPane.showMessageDialog(dialog, "Error al cargar los libros: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 	        return;
 	    }
 
@@ -229,28 +235,35 @@ public class VistaPrestamos extends JFrame {
 	        }
 
 	        int libroId = libroMap.get(selectedLibro);
+
 	        try (Connection connection = new Db().getConnection()) {
-	            String query = "INSERT INTO prestamos (ID_Libro, ID_Usuario, Fecha_Prestamo) VALUES (?, ?, ?)";
-	            try (PreparedStatement statement = connection.prepareStatement(query)) {
-	                statement.setInt(1, libroId);
-	                statement.setInt(2, getUserIdByEmail(emailUser, connection)); // Corrección aquí
-	                statement.setDate(3, new java.sql.Date(fechaChooser.getDate().getTime()));
-
-	                statement.executeUpdate();
-
-	                // Actualizar la disponibilidad del libro
-	                String updateQuery = "UPDATE libros SET Disponibilidad = 0 WHERE ID = ?";
-	                try (PreparedStatement updateStatement = connection.prepareStatement(updateQuery)) {
-	                    updateStatement.setInt(1, libroId);
-	                    updateStatement.executeUpdate();
+	            // Verificar si el libro está disponible
+	            String checkQuery = "SELECT Disponibilidad FROM libros WHERE ID = ?";
+	            try (PreparedStatement checkStatement = connection.prepareStatement(checkQuery)) {
+	                checkStatement.setInt(1, libroId);
+	                try (ResultSet resultSet = checkStatement.executeQuery()) {
+	                    if (resultSet.next() && resultSet.getInt("Disponibilidad") == 1) {
+	                        // Si está disponible, se presta normalmente
+	                        String insertQuery = "INSERT INTO prestamos (ID_Libro, ID_Usuario, Fecha_Prestamo) VALUES (?, ?, ?)";
+	                        try (PreparedStatement insertStatement = connection.prepareStatement(insertQuery)) {
+	                            insertStatement.setInt(1, libroId);
+	                            insertStatement.setInt(2, getUserIdByEmail(emailUser, connection));
+	                            insertStatement.setDate(3, new java.sql.Date(fechaChooser.getDate().getTime()));
+	                            insertStatement.executeUpdate();
+	                        }
+	                        JOptionPane.showMessageDialog(dialog, "Préstamo realizado con éxito.");
+	                    } else {
+	                        // Si NO está disponible, se añade a la lista de espera
+	                        listaEspera.putIfAbsent(libroId, new LinkedList<>());
+	                        listaEspera.get(libroId).add(emailUser);
+	                        JOptionPane.showMessageDialog(dialog, "Libro no disponible. Se ha agregado a la lista de espera.");
+	                    }
 	                }
-
-	                JOptionPane.showMessageDialog(dialog, "Préstamo añadido con éxito.");
-	                dialog.dispose();
-	                loadPrestamos("ALL", isAdmin, emailUser);
 	            }
+	            dialog.dispose();
+	            loadPrestamos("ALL", isAdmin, emailUser);
 	        } catch (SQLException ex) {
-	            JOptionPane.showMessageDialog(dialog, "Error al añadir el préstamo: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+	            JOptionPane.showMessageDialog(dialog, "Error al procesar la solicitud: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 	        }
 	    });
 
@@ -277,36 +290,72 @@ public class VistaPrestamos extends JFrame {
 	    dialog.setVisible(true);
 	}
 
+	private int getLibroIdByTitulo(String tituloLibro) {
+	    try (Connection connection = new Db().getConnection()) {
+	        String query = "SELECT ID FROM libros WHERE Titulo = ?";
+	        try (PreparedStatement statement = connection.prepareStatement(query)) {
+	            statement.setString(1, tituloLibro);
+	            try (ResultSet resultSet = statement.executeQuery()) {
+	                if (resultSet.next()) {
+	                    return resultSet.getInt("ID");
+	                }
+	            }
+	        }
+	    } catch (SQLException ex) {
+	        JOptionPane.showMessageDialog(this, "Error al obtener el ID del libro: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+	    }
+	    return -1; // Retorna un valor indicativo de que no se encontró el libro
+	}
+
 
 
 	private void updateReturnStatus(boolean isReturned) {
-		int selectedRow = prestamosTable.getSelectedRow();
-		if (selectedRow == -1) {
-			JOptionPane.showMessageDialog(this, "Seleccione un préstamo de la tabla.", "Advertencia",
-					JOptionPane.WARNING_MESSAGE);
-			return;
-		}
+	    int selectedRow = prestamosTable.getSelectedRow();
+	    if (selectedRow == -1) {
+	        JOptionPane.showMessageDialog(this, "Seleccione un préstamo de la tabla.", "Advertencia",
+	                JOptionPane.WARNING_MESSAGE);
+	        return;
+	    }
 
-		int prestamoId = (int) tableModel.getValueAt(selectedRow, 6);
-		try (Connection connection = new Db().getConnection()) {
-			String query = "UPDATE prestamos SET Fecha_Devolucion = ? WHERE ID = ?";
-			try (PreparedStatement statement = connection.prepareStatement(query)) {
-				if (isReturned) {
-					statement.setDate(1, new java.sql.Date(System.currentTimeMillis()));
-				} else {
-					statement.setNull(1, Types.DATE);
-				}
-				statement.setInt(2, prestamoId);
+	    int prestamoId = (int) tableModel.getValueAt(selectedRow, 6);
+	    String tituloLibro = (String) tableModel.getValueAt(selectedRow, 0);
+	    int libroId = getLibroIdByTitulo(tituloLibro);
 
-				statement.executeUpdate();
-				JOptionPane.showMessageDialog(this, "Estado de devolución actualizado con éxito.");
-				loadPrestamos("ALL", true, null);
-			}
-		} catch (SQLException e) {
-			JOptionPane.showMessageDialog(this, "Error al actualizar el estado de devolución: " + e.getMessage(),
-					"Error", JOptionPane.ERROR_MESSAGE);
-		}
+	    try (Connection connection = new Db().getConnection()) {
+	        String query = "UPDATE prestamos SET Fecha_Devolucion = ? WHERE ID = ?";
+	        try (PreparedStatement statement = connection.prepareStatement(query)) {
+	            if (isReturned) {
+	                statement.setDate(1, new java.sql.Date(System.currentTimeMillis()));
+	            } else {
+	                statement.setNull(1, Types.DATE);
+	            }
+	            statement.setInt(2, prestamoId);
+	            statement.executeUpdate();
+	        }
+
+	        if (isReturned && listaEspera.containsKey(libroId) && !listaEspera.get(libroId).isEmpty()) {
+	            // Si hay reservas, asignar el libro al primer usuario en la lista de espera
+	            String nextUserEmail = listaEspera.get(libroId).poll();  // Sacar el primer usuario
+
+	            if (nextUserEmail != null) {
+	                String insertQuery = "INSERT INTO prestamos (ID_Libro, ID_Usuario, Fecha_Prestamo) VALUES (?, ?, ?)";
+	                try (PreparedStatement insertStatement = connection.prepareStatement(insertQuery)) {
+	                    insertStatement.setInt(1, libroId);
+	                    insertStatement.setInt(2, getUserIdByEmail(nextUserEmail, connection));
+	                    insertStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
+	                    insertStatement.executeUpdate();
+	                }
+	                JOptionPane.showMessageDialog(this, "El libro fue asignado a " + nextUserEmail);
+	            }
+	        }
+
+	        loadPrestamos("ALL", true, null);
+	    } catch (SQLException e) {
+	        JOptionPane.showMessageDialog(this, "Error al actualizar el estado de devolución: " + e.getMessage(),
+	                "Error", JOptionPane.ERROR_MESSAGE);
+	    }
 	}
+
 
 	private int getUserIdByEmail(String email, Connection connection) throws SQLException {
 		String query = "SELECT ID FROM usuarios WHERE Email = ?";
