@@ -5,7 +5,10 @@ import java.awt.EventQueue;
 import java.awt.Toolkit;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -33,9 +36,10 @@ public class Main {
                     // Ejecutar la actualización de multas en un hilo programado
                     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-                    // Ejecutar la actualización de multas cada 24 horas (86400 segundos)
+                    // Ejecutar la actualización de multas y el envío de notificaciones cada 24 horas (86400 segundos)
                     scheduler.scheduleAtFixedRate(() -> {
                         actualizarMultas();  // Llama al método de actualización de multas
+                        sendDailyNotifications("currentUser");  // Método para enviar notificaciones diarias sobre multas y días restantes
                     }, 0, 24, TimeUnit.HOURS);
 
                 } catch (Exception e) {
@@ -62,6 +66,83 @@ public class Main {
         } catch (SQLException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(null, "Error al actualizar las multas: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Método para enviar notificaciones diarias sobre los días restantes antes de la multa
+    public static void sendDailyNotifications(String currentUser) {
+        try (Connection connection = new Db().getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "SELECT libros.ID, libros.Titulo, prestamos.Fecha_Devolucion, prestamos.Fecha_Prestamo "
+                     + "FROM prestamos "
+                     + "JOIN libros ON prestamos.id_libro = libros.ID "
+                     + "WHERE prestamos.id_usuario = ?")) {
+            ps.setString(1, currentUser);
+            ResultSet resultSet = ps.executeQuery();
+
+            while (resultSet.next()) {
+                int libroId = resultSet.getInt("ID");
+                String titulo = resultSet.getString("Titulo");
+                LocalDate fechaDevolucion = resultSet.getDate("Fecha_Devolucion") != null 
+                    ? resultSet.getDate("Fecha_Devolucion").toLocalDate() 
+                    : null;
+                LocalDate fechaPrestamo = resultSet.getDate("Fecha_Prestamo").toLocalDate();
+                LocalDate hoy = LocalDate.now();
+
+                // Verificar si el libro está disponible para la cola de espera
+                if (libroEstaDisponibleParaCola(libroId)) {
+                    addNotification("El libro " + titulo + " ya está disponible. Puede retirarlo.", hoy.toString(), currentUser);
+                }
+
+                // Notificación sobre días restantes para la devolución
+                if (fechaDevolucion == null) {
+                    long diasRestantes = ChronoUnit.DAYS.between(hoy, fechaPrestamo.plusDays(15)); // Los 15 días de préstamo
+
+                    if (diasRestantes > 0) {
+                        addNotification("Te quedan " + diasRestantes + " días para devolver el libro: " + titulo, hoy.toString(), currentUser);
+                    } else {
+                        // Notificación de multa después del límite
+                        long diasMulta = Math.abs(diasRestantes);
+                        addNotification("¡ALERTA! Tu libro '" + titulo + "' está retrasado por " + diasMulta + " días. La multa es de " 
+                                + (diasMulta * 2) + " unidades.", hoy.toString(), currentUser);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al enviar notificaciones diarias: " + e.getMessage(), "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Función para verificar si el libro está disponible en la cola de espera
+    private static boolean libroEstaDisponibleParaCola(int libroId) {
+        try (Connection connection = new Db().getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "SELECT COUNT(*) FROM cola_reserva WHERE id_libro = ? AND estado = 'pendiente'")) {
+            ps.setInt(1, libroId);
+            ResultSet resultSet = ps.executeQuery();
+            if (resultSet.next() && resultSet.getInt(1) == 0) {
+                // Si la cola está vacía, el libro está disponible
+                return true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // Método para agregar notificaciones a la base de datos
+    private static void addNotification(String mensaje, String fecha, String currentUser) {
+        try (Connection connection = new Db().getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "INSERT INTO notificaciones (Mensaje, Fecha_Notificacion, id_usuario) VALUES (?, ?, ?)")) {
+            ps.setString(1, mensaje);
+            ps.setString(2, fecha);
+            ps.setString(3, currentUser);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al añadir notificación: " + e.getMessage(), "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 }

@@ -14,7 +14,10 @@ public class VistaNotificaciones extends JFrame {
 	private JTable notificationsTable;
 	private DefaultTableModel tableModel;
 
+
+
 	public VistaNotificaciones(boolean isAdmin, String currentUser, String emailUser) {
+		// TODO Auto-generated constructor stub
 		setTitle("Vista de Notificaciones");
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setExtendedState(JFrame.MAXIMIZED_BOTH);

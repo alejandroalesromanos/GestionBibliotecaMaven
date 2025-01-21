@@ -11,7 +11,7 @@ public class MenuPrincipal extends JFrame {
         setTitle("Menú Principal");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setResizable(false);   // Impide que la ventana cambie de tamaño (opcional)
+        setResizable(false);
         setLocationRelativeTo(null); 
 
         // Fondo personalizado con gradiente
@@ -83,7 +83,18 @@ public class MenuPrincipal extends JFrame {
         gbc.gridy = 4;
         fondoPanel.add(notificationsButton, gbc);
 
-     // Botón para cerrar sesión
+        // Botón para reportes (solo para administradores)
+        if (isAdmin) {
+            JButton reportesButton = createStyledButton("Reportes");
+            reportesButton.addActionListener(e -> {
+                new VistaReportes(isAdmin, currentUser, emailUser).setVisible(true);
+                dispose();
+            });
+            gbc.gridy = 5; // Nueva posición para el botón
+            fondoPanel.add(reportesButton, gbc);
+        }
+
+        // Botón para cerrar sesión
         JButton logoutButton = createStyledButton("Cerrar Sesión");
         logoutButton.addActionListener(e -> {
             VistaLogin loginView = new VistaLogin();
@@ -91,13 +102,12 @@ public class MenuPrincipal extends JFrame {
             Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
             int x = (int) (screenSize.getWidth() - loginView.getWidth()) / 2;
             int y = (int) (screenSize.getHeight() - loginView.getHeight()) / 2;
-            loginView.setLocation(x, y);// Ajusta el tamaño de la ventana de inicio de sesión
-            loginView.setVisible(true);   // Luego haz visible la ventana
-            dispose();                   // Cierra la ventana actual
+            loginView.setLocation(x, y);
+            loginView.setVisible(true);
+            dispose();
         });
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         fondoPanel.add(logoutButton, gbc);
-
     }
 
     private JButton createStyledButton(String text) {
