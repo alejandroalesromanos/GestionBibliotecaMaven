@@ -173,7 +173,7 @@ public class VistaUsuarios extends JFrame {
         JTextField apellidosField = new JTextField(20);
         JTextField emailField = new JTextField(20);
         JTextField telefonoField = new JTextField(20);
-        JComboBox<String> roleComboBox = new JComboBox<>(new String[] { "Administrador", "Usuario estándar" });
+        JComboBox<String> roleComboBox = new JComboBox<>(new String[] { "Administrador", "Usuario_estándar" });
         JPasswordField passwordField = new JPasswordField(20);
 
         gbc.gridx = 0;
@@ -309,7 +309,7 @@ public class VistaUsuarios extends JFrame {
         JTextField apellidosField = new JTextField(apellidos, 20);
         JTextField emailField = new JTextField(email, 20);
         JTextField telefonoField = new JTextField(telefono, 20);
-        JComboBox<String> roleComboBox = new JComboBox<>(new String[]{"Administrador", "Usuario estándar"});
+        JComboBox<String> roleComboBox = new JComboBox<>(new String[]{"Administrador", "Usuario_estándar"});
         roleComboBox.setSelectedItem(rol);
 
         gbc.gridx = 0;

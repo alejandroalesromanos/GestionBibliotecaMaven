@@ -87,7 +87,11 @@ public class MenuPrincipal extends JFrame {
         JButton logoutButton = createStyledButton("Cerrar Sesión");
         logoutButton.addActionListener(e -> {
             VistaLogin loginView = new VistaLogin();
-            loginView.setSize(700, 500);  // Ajusta el tamaño de la ventana de inicio de sesión
+            loginView.setSize(700, 500);
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            int x = (int) (screenSize.getWidth() - loginView.getWidth()) / 2;
+            int y = (int) (screenSize.getHeight() - loginView.getHeight()) / 2;
+            loginView.setLocation(x, y);// Ajusta el tamaño de la ventana de inicio de sesión
             loginView.setVisible(true);   // Luego haz visible la ventana
             dispose();                   // Cierra la ventana actual
         });
