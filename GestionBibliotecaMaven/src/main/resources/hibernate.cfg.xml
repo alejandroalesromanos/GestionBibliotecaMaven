@@ -3,17 +3,23 @@
     "-//Hibernate/Hibernate Configuration DTD 3.0//EN" 
     "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
 <hibernate-configuration>
-	<session-factory>
-		<property name="hibernate.connection.driver_class">com.mysql.cj.jdbc.Driver</property>
-		<property name="hibernate.connection.url">jdbc:mysql://localhost:3306/biblioteca</property>
-		<property name="hibernate.connection.username">root</property>
-		<property name="hibernate.connection.password">root</property>
-		<property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
-		<property name="hibernate.hbm2ddl.auto">update</property>
-		<mapping class="modelo.Usuario" />
-		<mapping class="modelo.Reservas" />
-		<mapping class="modelo.Prestamo" />
-		<mapping class="modelo.Notificacion" />
-		<mapping class="modelo.Libro" />	
-	</session-factory>
+    <session-factory>
+        <!-- Configuración de la conexión -->
+        <property name="hibernate.connection.driver_class">com.mysql.cj.jdbc.Driver</property>
+        <property name="hibernate.connection.url">jdbc:mysql://localhost:3306/biblioteca</property>
+        <property name="hibernate.connection.username">root</property>
+        <property name="hibernate.connection.password">root</property>
+        <property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
+        <property name="hibernate.hbm2ddl.auto">update</property>
+
+        <!-- Configuración del contexto de sesión -->
+        <property name="hibernate.current_session_context_class">thread</property>
+
+        <!-- Mappings -->
+        <mapping class="modelo.Usuario" />
+        <mapping class="modelo.Reservas" />
+        <mapping class="modelo.Prestamo" />
+        <mapping class="modelo.Notificacion" />
+        <mapping class="modelo.Libro" />  
+    </session-factory>
 </hibernate-configuration>

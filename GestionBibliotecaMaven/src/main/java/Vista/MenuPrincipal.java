@@ -59,7 +59,8 @@ public class MenuPrincipal extends JFrame {
         // Botón para vista de libros
         JButton bookManagementButton = createStyledButton("Vista de Libros");
         bookManagementButton.addActionListener(e -> {
-            new VistaLibros(isAdmin, currentUser, emailUser).setVisible(true);
+            VistaLibros vistaLibros = new VistaLibros(isAdmin, currentUser, emailUser);
+            vistaLibros.setVisible(true);
             dispose();
         });
         gbc.gridy = 2;

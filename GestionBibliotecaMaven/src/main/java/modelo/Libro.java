@@ -1,6 +1,6 @@
 package modelo;
 
-import java.util.Date;
+import java.sql.Date;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,43 +14,44 @@ import jakarta.persistence.Table;
 public class Libro {
 
     public enum Generos {
-        FANTASIA,
-        CIENCIA_FICCION,
-        TERROR,
-        MISTERIO,
-        ROMANCE,
-        AVENTURA,
-        HISTORICO,
-        BIOGRAFIA,
-        POESIA,
-        DRAMA,
+        Fantasia,
+        Ciencia_Ficcion,
+        Terror,
+        Misterio,
+        Ficción,
+        Aventura,
+        Historico,
+        Biografia,
+        Poesía,
+        Drama,
+        Novela,
+        Realismo,
+        Distopía
     }
 
     @Id 
-    @Column(name = "id") // Especifica el nombre de la columna en la base de datos (opcional)
+    @Column(name = "id") 
     private int id;
 
-    @Column(name = "titulo") // Asocia el atributo con la columna 'titulo' en la tabla
+    @Column(name = "titulo") 
     private String titulo;
 
-    @Column(name = "autor") // Asocia el atributo con la columna 'autor' en la tabla
+    @Column(name = "autor") 
     private String autor;
 
-    @Enumerated(EnumType.STRING) // Especifica cómo se debe almacenar el valor del enum
-    @Column(name = "genero") // Asocia el atributo con la columna 'genero' en la tabla
+    @Enumerated(EnumType.STRING) 
+    @Column(name = "genero") 
     private Generos genero;
 
-    @Column(name = "disponibilidad") // Asocia el atributo con la columna 'disponibilidad' en la tabla
+    @Column(name = "disponibilidad") 
     private boolean disponibilidad;
 
-    @Column(name = "fechaDePublicacion") // Asocia el atributo con la columna 'fechaDePublicacion' en la tabla
-    private Date fechaDePublicacion;
+    @Column(name = "Fecha_Publicacion") 
+    private Date fechaDePublicacion; // Cambio aquí a java.sql.Date
 
-    // Constructor por defecto, necesario para Hibernate
     public Libro() {
     }
 
-    // Constructor con parámetros
     public Libro(int id, String titulo, String autor, Generos genero, boolean disponibilidad, Date fechaDePublicacion) {
         super();
         this.id = id;
@@ -110,5 +111,4 @@ public class Libro {
     public void setFechaDePublicacion(Date fechaDePublicacion) {
         this.fechaDePublicacion = fechaDePublicacion;
     }
-
 }
