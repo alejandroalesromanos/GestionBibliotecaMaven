@@ -24,6 +24,7 @@ public class GestorLibros {
         } catch (Exception e) {
             if (transaction != null) {
                 transaction.rollback(); // En caso de error, se revierte la transacción
+                System.err.println("Error al realizar la transacción. Se ha revertido la operación.");
             }
             e.printStackTrace();
             return false;
@@ -48,6 +49,7 @@ public class GestorLibros {
         } catch (Exception e) {
             if (transaction != null) {
                 transaction.rollback(); // En caso de error, se revierte la transacción
+                System.err.println("Error al realizar la transacción. Se ha revertido la operación.");
             }
             e.printStackTrace();
             return false;
@@ -69,6 +71,7 @@ public class GestorLibros {
         } catch (Exception e) {
             if (transaction != null) {
                 transaction.rollback(); // En caso de error, se revierte la transacción
+                System.err.println("Error al realizar la transacción. Se ha revertido la operación.");
             }
             e.printStackTrace();
             return false;

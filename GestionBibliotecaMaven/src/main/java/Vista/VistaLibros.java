@@ -1,19 +1,27 @@
 package Vista;
 
-import java.awt.*;
-import java.sql.*;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableModel;
+import modelo.GestorLibros;
+import modelo.Libro;
+import modelo.Libro.Generos;
+
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
 
 import com.toedter.calendar.JDateChooser;
 
-import modelo.Db;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.util.List;
 
 public class VistaLibros extends JFrame {
     private static final long serialVersionUID = 1L;
     private JTable bookTable;
     private DefaultTableModel tableModel;
+    private GestorLibros gestorLibros;
+    private Session session;
 
     public VistaLibros(boolean isAdmin, String currentUser, String emailUser) {
         setTitle("Vista de Libros");
@@ -93,31 +101,30 @@ public class VistaLibros extends JFrame {
 
         fondoPanel.add(buttonPanel, BorderLayout.EAST);
 
+        // Iniciar la sesión de Hibernate
+        SessionFactory factory = new Configuration().configure().addAnnotatedClass(Libro.class).buildSessionFactory();
+        session = factory.getCurrentSession();
+        gestorLibros = new GestorLibros(session);
+
         // Cargar libros al inicio
         loadBooks();
     }
 
     private void loadBooks() {
-        try (Connection connection = new Db().getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT ID, Titulo, Autor, Genero, Disponibilidad, Fecha_Publicacion FROM libros")) {
-
+        try {
+            session.beginTransaction();
+            List<Libro> libros = gestorLibros.obtenerTodosLosLibros();
             tableModel.setRowCount(0); // Limpiar la tabla
-            while (resultSet.next()) {
-                int id = resultSet.getInt("ID");
-                String titulo = resultSet.getString("Titulo");
-                String autor = resultSet.getString("Autor");
-                String genero = resultSet.getString("Genero");
-                boolean disponibilidad = resultSet.getBoolean("Disponibilidad");
-                Date fechaPublicacion = resultSet.getDate("Fecha_Publicacion");
 
+            for (Libro libro : libros) {
                 tableModel.addRow(new Object[]{
-                    id, titulo, autor, genero != null ? genero : "N/A",
-                    disponibilidad ? "Disponible" : "No Disponible",
-                    fechaPublicacion != null ? fechaPublicacion.toString() : "N/A"
+                    libro.getId(), libro.getTitulo(), libro.getAutor(), libro.getGenero() != null ? libro.getGenero() : "N/A",
+                    libro.isDisponibilidad() ? "Disponible" : "No Disponible", libro.getFechaDePublicacion() != null ? libro.getFechaDePublicacion().toString() : "N/A"
                 });
             }
-        } catch (SQLException e) {
+
+            session.getTransaction().commit();
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al cargar libros: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -148,31 +155,25 @@ public class VistaLibros extends JFrame {
             String autor = autorField.getText().trim();
             String genero = generoField.getText().trim();
             boolean disponibilidad = disponibilidadBox.isSelected();
-            Date fechaPublicacion = null;
-
-            if (fechaPublicacionChooser.getDate() != null) {
-                fechaPublicacion = new java.sql.Date(fechaPublicacionChooser.getDate().getTime());
-            }
+            java.util.Date fechaPublicacion = fechaPublicacionChooser.getDate();
 
             if (titulo.isEmpty() || autor.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Título y Autor son obligatorios.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            try (Connection connection = new Db().getConnection();
-                 PreparedStatement ps = connection.prepareStatement(
-                         "INSERT INTO libros (Titulo, Autor, Genero, Disponibilidad, Fecha_Publicacion) VALUES (?, ?, ?, ?, ?)")) {
-                ps.setString(1, titulo);
-                ps.setString(2, autor);
-                ps.setString(3, genero.isEmpty() ? null : genero);
-                ps.setBoolean(4, disponibilidad);
-                ps.setDate(5, fechaPublicacion);
-                ps.executeUpdate();
+            Libro nuevoLibro = new Libro();
+            nuevoLibro.setTitulo(titulo);
+            nuevoLibro.setAutor(autor);
+            nuevoLibro.setGenero(genero.isEmpty() ? null : Generos.valueOf(genero.toUpperCase()));
+            nuevoLibro.setDisponibilidad(disponibilidad);
+            nuevoLibro.setFechaDePublicacion(fechaPublicacion);
 
+            if (gestorLibros.insertarLibro(nuevoLibro)) {
                 loadBooks();
                 JOptionPane.showMessageDialog(this, "Libro añadido con éxito.", "Información", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(this, "Error al añadir libro: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al añadir libro.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -185,18 +186,11 @@ public class VistaLibros extends JFrame {
         }
 
         int bookId = (int) tableModel.getValueAt(selectedRow, 0);
-
-        int confirmOption = JOptionPane.showConfirmDialog(this, "¿Está seguro de que desea eliminar este libro?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
-        if (confirmOption == JOptionPane.YES_OPTION) {
-            try (Connection connection = new Db().getConnection();
-                 PreparedStatement ps = connection.prepareStatement("DELETE FROM libros WHERE ID = ?")) {
-                ps.setInt(1, bookId);
-                ps.executeUpdate();
-                loadBooks();
-                JOptionPane.showMessageDialog(this, "Libro eliminado con éxito.", "Información", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar libro: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
+        if (gestorLibros.eliminarLibro(bookId)) {
+            loadBooks();
+            JOptionPane.showMessageDialog(this, "Libro eliminado con éxito.", "Información", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "Error al eliminar libro.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -208,24 +202,14 @@ public class VistaLibros extends JFrame {
         }
 
         int bookId = (int) tableModel.getValueAt(selectedRow, 0);
-        boolean currentAvailability = "Disponible".equals(tableModel.getValueAt(selectedRow, 4));
-
-        int confirmOption = JOptionPane.showConfirmDialog(this,
-                "¿Está seguro de que desea cambiar la disponibilidad de este libro?",
-                "Confirmar Cambio",
-                JOptionPane.YES_NO_OPTION);
-
-        if (confirmOption == JOptionPane.YES_OPTION) {
-            try (Connection connection = new Db().getConnection();
-                 PreparedStatement ps = connection.prepareStatement("UPDATE libros SET Disponibilidad = ? WHERE ID = ?")) {
-                ps.setBoolean(1, !currentAvailability);
-                ps.setInt(2, bookId);
-                ps.executeUpdate();
-
+        Libro libro = gestorLibros.buscarLibroPorId(bookId);
+        if (libro != null) {
+            libro.setDisponibilidad(!libro.isDisponibilidad()); // Cambiar disponibilidad
+            if (gestorLibros.actualizarLibro(libro)) {
                 loadBooks();
                 JOptionPane.showMessageDialog(this, "Disponibilidad cambiada con éxito.", "Información", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(this, "Error al cambiar disponibilidad: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Error al cambiar disponibilidad.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -245,25 +229,11 @@ public class VistaLibros extends JFrame {
             addMouseListener(new java.awt.event.MouseAdapter() {
                 public void mouseEntered(java.awt.event.MouseEvent evt) {
                     setBackground(new Color(41, 128, 185));
-                    setBorder(BorderFactory.createLineBorder(new Color(52, 152, 219), 2));
                 }
-
                 public void mouseExited(java.awt.event.MouseEvent evt) {
                     setBackground(new Color(52, 152, 219));
-                    setBorder(BorderFactory.createLineBorder(new Color(41, 128, 185), 2));
                 }
             });
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            if (getModel().isArmed()) {
-                g.setColor(new Color(31, 97, 141));
-            } else {
-                g.setColor(getBackground());
-            }
-            g.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 10, 10);
-            super.paintComponent(g);
         }
     }
 }

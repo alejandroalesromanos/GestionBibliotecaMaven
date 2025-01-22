@@ -10,6 +10,8 @@ import java.util.List;
 
 public class GestorPrestamos {
     private SessionFactory sessionFactory;
+    
+    // Clase sin sql por haberlo hecho desde Hibernate
 
     // Constructor que recibe el SessionFactory
     public GestorPrestamos(SessionFactory sessionFactory) {
