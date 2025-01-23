@@ -49,7 +49,7 @@ public class VistaUsuarios extends JFrame {
         fondoPanel.add(titleLabel, BorderLayout.NORTH);
 
         // Tabla de usuarios
-        tableModel = new DefaultTableModel(new Object[][]{}, new String[]{"ID", "DNI", "Nombre", "Apellidos", "Email", "Teléfono", "Rol"}) {
+        tableModel = new DefaultTableModel(new Object[][]{}, new String[]{"DNI", "Nombre", "Apellidos", "Email", "Teléfono", "Rol"}) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -146,7 +146,6 @@ public class VistaUsuarios extends JFrame {
 
             while (resultSet.next()) {
                 tableModel.addRow(new Object[] {
-                        resultSet.getInt("ID"),
                         resultSet.getString("DNI"),
                         resultSet.getString("Nombre"),
                         resultSet.getString("Apellidos"),
