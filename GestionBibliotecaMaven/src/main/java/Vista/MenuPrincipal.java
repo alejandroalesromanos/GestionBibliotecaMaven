@@ -88,7 +88,7 @@ public class MenuPrincipal extends JFrame {
         if (isAdmin) {
             JButton reportesButton = createStyledButton("Reportes");
             reportesButton.addActionListener(e -> {
-                new VistaReportes(isAdmin, currentUser, emailUser).setVisible(true);
+                new VistaReportes(isAdmin, emailUser, emailUser).setVisible(true);
                 dispose();
             });
             gbc.gridy = 5; // Nueva posición para el botón
