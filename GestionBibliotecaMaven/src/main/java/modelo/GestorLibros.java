@@ -27,17 +27,25 @@ public class GestorLibros {
         }
     }
 
-    // Método para obtener todos los libros
     public List<Libro> obtenerTodosLosLibros() {
         try (Session session = sessionFactory.openSession()) {
-            String hql = "FROM Libro"; // HQL es el lenguaje de consultas de Hibernate
+            String hql = "FROM Libro";
             Query<Libro> query = session.createQuery(hql, Libro.class);
-            return query.getResultList(); // Método recomendado para obtener listas de resultados
+            List<Libro> libros = query.getResultList();
+
+            if (libros == null) {  // Prevención de null
+                System.out.println("La consulta no devolvió ningún libro.");
+                return List.of(); // Devolver una lista vacía en lugar de null
+            }
+
+            System.out.println("Se encontraron " + libros.size() + " libros.");
+            return libros;
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return List.of(); // En caso de error, devolver una lista vacía en lugar de null
         }
     }
+
 
     // Método para actualizar un libro
     public boolean actualizarLibro(Libro libro) {

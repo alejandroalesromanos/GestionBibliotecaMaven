@@ -21,5 +21,6 @@
         <mapping class="modelo.Prestamo" />
         <mapping class="modelo.Notificacion" />
         <mapping class="modelo.Libro" />  
+        
     </session-factory>
 </hibernate-configuration>

@@ -22,30 +22,19 @@
     <version>1.4</version>
 </dependency>
 
-   <dependency>
-        <groupId>net.sf.jasperreports</groupId>
-        <artifactId>jasperreports</artifactId>
-        <version>6.18.1</version> <!-- Usa la versión más reciente disponible -->
-    </dependency>
-    <!-- Dependencia para Swing (opcional, si es necesario para tu UI) -->
+    <!-- Apache Commons Logging (dependencia requerida por BIRT) -->
     <dependency>
-        <groupId>org.swinglabs</groupId>
-        <artifactId>swingx</artifactId>
-        <version>1.6.1</version>
-    </dependency>
-    <!-- Dependencia para Swing -->
-    <dependency>
-        <groupId>org.swinglabs</groupId>
-        <artifactId>swingx</artifactId>
-        <version>1.6.1</version>
-    </dependency>
-    <!-- Dependencia de log4j (si es necesario para los logs) -->
-    <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>1.2.17</version>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.2</version>
     </dependency>
 
+    <!-- Additional dependencies -->
+    <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.12.0</version>
+    </dependency>
 
 
 	</dependencies> 

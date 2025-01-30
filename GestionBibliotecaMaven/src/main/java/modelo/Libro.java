@@ -47,19 +47,19 @@ public class Libro {
     private boolean disponibilidad;
 
     @Column(name = "Fecha_Publicacion") 
-    private Date fechaDePublicacion; // Cambio aquí a java.sql.Date
+    private Date Fecha_Publicacion; // Cambio aquí a java.sql.Date
 
     public Libro() {
     }
 
-    public Libro(int id, String titulo, String autor, Generos genero, boolean disponibilidad, Date fechaDePublicacion) {
+    public Libro(int id, String titulo, String autor, Generos genero, boolean disponibilidad, Date Fecha_Publicacion) {
         super();
         this.id = id;
         this.titulo = titulo;
         this.autor = autor;
         this.genero = genero;
         this.disponibilidad = disponibilidad;
-        this.fechaDePublicacion = fechaDePublicacion;
+        this.Fecha_Publicacion = Fecha_Publicacion;
     }
 
     // Métodos getter y setter
@@ -105,10 +105,10 @@ public class Libro {
     }
 
     public Date getFechaDePublicacion() {
-        return fechaDePublicacion;
+        return Fecha_Publicacion;
     }
 
-    public void setFechaDePublicacion(Date fechaDePublicacion) {
-        this.fechaDePublicacion = fechaDePublicacion;
+    public void setFechaDePublicacion(Date Fecha_Publicacion) {
+        this.Fecha_Publicacion = Fecha_Publicacion;
     }
 }

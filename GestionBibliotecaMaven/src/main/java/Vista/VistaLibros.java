@@ -100,7 +100,7 @@ public class VistaLibros extends JFrame {
         fondoPanel.add(searchPanel, BorderLayout.NORTH);
 
         // Tabla de libros
-        tableModel = new DefaultTableModel(new Object[][] {}, new String[] { "Título", "Autor", "Género", "Disponibilidad", "Fecha de Publicación" }) {
+        tableModel = new DefaultTableModel(new Object[][] {}, new String[] { "ID", "Título", "Autor", "Género", "Disponibilidad", "Fecha de Publicación" }) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -155,20 +155,28 @@ public class VistaLibros extends JFrame {
 
     private void loadBooks() {
         try (Session session = sessionFactory.openSession()) {
-            session.beginTransaction();
+            Transaction transaction = session.beginTransaction();
             List<Libro> libros = gestorLibros.obtenerTodosLosLibros();
+
+            if (libros == null || libros.isEmpty()) {
+                System.out.println("No se encontraron libros en la base de datos.");
+            } else {
+                System.out.println("Se encontraron " + libros.size() + " libros.");
+            }
+
             tableModel.setRowCount(0); // Limpiar la tabla
 
             for (Libro libro : libros) {
-                tableModel.addRow(new Object[] { libro.getTitulo(), libro.getAutor(),
-                        libro.getGenero() != null ? libro.getGenero() : "N/A",
+                tableModel.addRow(new Object[] { libro.getId(), libro.getTitulo(), libro.getAutor(),
+                        libro.getGenero() != null ? libro.getGenero().toString() : "N/A",
                         libro.isDisponibilidad() ? "Disponible" : "No Disponible",
                         libro.getFechaDePublicacion() != null ? libro.getFechaDePublicacion().toString() : "N/A" });
             }
 
-            session.getTransaction().commit();
+            transaction.commit();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al cargar libros: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 
@@ -177,21 +185,22 @@ public class VistaLibros extends JFrame {
         String author = searchAuthorField.getText().trim();
 
         try (Session session = sessionFactory.openSession()) {
-            session.beginTransaction();
+            Transaction transaction = session.beginTransaction();
 
             List<Libro> libros = gestorLibros.buscarLibrosPorTituloYAutor(title, author);
             tableModel.setRowCount(0); // Limpiar la tabla
 
             for (Libro libro : libros) {
-                tableModel.addRow(new Object[] {libro.getTitulo(), libro.getAutor(),
-                        libro.getGenero() != null ? libro.getGenero() : "N/A",
+                tableModel.addRow(new Object[] { libro.getId(), libro.getTitulo(), libro.getAutor(),
+                        libro.getGenero() != null ? libro.getGenero().toString() : "N/A",
                         libro.isDisponibilidad() ? "Disponible" : "No Disponible",
                         libro.getFechaDePublicacion() != null ? libro.getFechaDePublicacion().toString() : "N/A" });
             }
 
-            session.getTransaction().commit();
+            transaction.commit();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al buscar libros: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 

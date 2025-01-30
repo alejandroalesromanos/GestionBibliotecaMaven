@@ -1,29 +1,22 @@
 package Vista;
 
-import net.sf.jasperreports.engine.*;
-import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
-import net.sf.jasperreports.swing.JRViewer;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.BufferedWriter;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class VistaReportes extends JFrame {
     private static final long serialVersionUID = 1L;
     private JPanel reportPanel;
 
     public VistaReportes(boolean isAdmin, String currentUser, String emailUser) {
-        setTitle("Generador de Reportes Jasper");
+        setTitle("Generador de Reportes BIRT");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setExtendedState(JFrame.MAXIMIZED_BOTH); // Pantalla completa
         setMinimumSize(new Dimension(800, 600));
@@ -53,9 +46,20 @@ public class VistaReportes extends JFrame {
         buttonPanel.setOpaque(false);
         buttonPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        JButton generateButton = new StyledButton("Generar Reporte");
-        generateButton.addActionListener(e -> generateReport());
-        buttonPanel.add(generateButton);
+        // Botones para los reportes
+        String[] reportFiles = {"informe_libros_mas_prestados.rptdesign", "informemax.rptdesign", "informeprueba.rptdesign", "informe4.rptdesign"};
+        for (int i = 0; i < reportFiles.length; i++) {
+            String reportFile = reportFiles[i];
+            final int reportIndex = i; // Crear una copia de 'i'
+            JButton reportButton = new StyledButton("Generar Reporte " + (reportIndex + 1));
+            reportButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    generateReport(reportFile, "Reporte " + (reportIndex + 1));
+                }
+            });
+            buttonPanel.add(reportButton);
+        }
 
         JButton backButton = new StyledButton("Volver al Menú Principal");
         backButton.addActionListener(e -> {
@@ -72,107 +76,48 @@ public class VistaReportes extends JFrame {
         fondoPanel.add(reportPanel, BorderLayout.CENTER);
     }
 
-    private void generateReport() {
-        // Construir la ruta al escritorio y la carpeta "Reportes"
+    private void generateReport(String reportFileName, String reportTitle) {
         String userHome = System.getProperty("user.home");
         String reportsFolder = userHome + File.separator + "Desktop" + File.separator + "Reportes";
-        String desktopPath = reportsFolder + File.separator + "reporte.pdf";
-        String reportPath = "C:\\Users\\ikasle\\Documents\\reportes\\reporte.jrxml"; // Cambiar a la ruta real
+        String outputPath = reportsFolder + File.separator + reportFileName.replace(".rptdesign", ".pdf");
+
+        // Obtener la ruta del recurso dentro de src/main/resources
+        URL resourceUrl = getClass().getClassLoader().getResource(reportFileName);
+        if (resourceUrl == null) {
+            JOptionPane.showMessageDialog(this, "No se encontró el archivo: " + reportFileName, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String reportPath;
+        try {
+            reportPath = Paths.get(resourceUrl.toURI()).toString();
+        } catch (URISyntaxException e) {
+            JOptionPane.showMessageDialog(this, "Error al obtener la ruta del reporte: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
         try {
-            // Verificar o crear la carpeta "Reportes"
+            // Crear la carpeta "Reportes" si no existe
             File folder = new File(reportsFolder);
             if (!folder.exists()) {
-                folder.mkdirs(); // Crear la carpeta si no existe
+                folder.mkdirs();
             }
 
-            // Verificar si el archivo JRXML existe o está vacío, y crearlo con contenido básico si es necesario
-            File reportFile = new File(reportPath);
-            if (!reportFile.exists() || reportFile.length() == 0) {
-                createDefaultJRXML(reportPath); // Crear el archivo JRXML con contenido básico
-            }
-
-            // Cargar el archivo JRXML
-            JasperReport jasperReport = JasperCompileManager.compileReport(reportPath);
-
-            // Datos ficticios de ejemplo para el reporte
-            List<Map<String, Object>> data = new ArrayList<>();
-            Map<String, Object> row = new HashMap<>();
-            row.put("name", "Juan Pérez");
-            row.put("age", 30);
-            data.add(row);
-
-            JRBeanCollectionDataSource dataSource = new JRBeanCollectionDataSource(data);
-
-            // Rellenar el reporte con datos
-            JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, new HashMap<>(), dataSource);
-
-            // Exportar el reporte a PDF en la ruta definida
-            JasperExportManager.exportReportToPdfFile(jasperPrint, desktopPath);
-
-            // Mostrar la vista previa en el panel
-            showReportPreview(jasperPrint);
+            // Ejecutar el comando de BIRT para generar el reporte
+            String[] command = {
+                    "cmd", "/c", "C:\\path\\to\\birt-runtime\\birt-runtime\\ReportEngine\\bin\\rptview",
+                    "-f", "pdf", "-o", outputPath, "-r", reportPath
+            };
+            ProcessBuilder builder = new ProcessBuilder(command);
+            builder.inheritIO(); // Esto hace que la salida del proceso se vea en la consola
+            Process process = builder.start();
+            process.waitFor();
 
             // Notificar al usuario
-            JOptionPane.showMessageDialog(this, "Reporte generado exitosamente en:\n" + desktopPath, "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error al generar reporte: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, reportTitle + " generado exitosamente en:\n" + outputPath, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException | InterruptedException e) {
+            JOptionPane.showMessageDialog(this, "Error al generar " + reportTitle + ": " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private void createDefaultJRXML(String reportPath) {
-        String defaultJRXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<jasperReport xmlns=\"http://jasperreports.sourceforge.net/jasperreports\" " +
-                "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"" +
-                "http://jasperreports.sourceforge.net/jasperreports " +
-                "http://jasperreports.sourceforge.net/xsd/jasperreport.xsd\" " +
-                "name=\"reporte\" pageWidth=\"595\" pageHeight=\"842\" columnWidth=\"515\" leftMargin=\"40\" " +
-                "rightMargin=\"40\" topMargin=\"50\" bottomMargin=\"50\">\n" +
-                "   <queryString language=\"SQL\">\n" +
-                "      <![CDATA[SELECT * FROM table_name]]>\n" +
-                "   </queryString>\n" +
-                "   <field name=\"name\" class=\"java.lang.String\"/>\n" +
-                "   <field name=\"age\" class=\"java.lang.Integer\"/>\n" +
-                "   <title>\n" +
-                "      <band height=\"50\">\n" +
-                "         <staticText>\n" +
-                "            <reportElement x=\"0\" y=\"0\" width=\"100\" height=\"20\"/>\n" +
-                "            <textElement/>\n" +
-                "            <text><![CDATA[Reporte de Usuarios]]></text>\n" +
-                "         </staticText>\n" +
-                "      </band>\n" +
-                "   </title>\n" +
-                "   <detail>\n" +
-                "      <band height=\"20\">\n" +
-                "         <textField>\n" +
-                "            <reportElement x=\"0\" y=\"0\" width=\"100\" height=\"20\"/>\n" +
-                "            <textElement/>\n" +
-                "            <textFieldExpression><![CDATA[$F{name}]]></textFieldExpression>\n" +
-                "         </textField>\n" +
-                "         <textField>\n" +
-                "            <reportElement x=\"120\" y=\"0\" width=\"100\" height=\"20\"/>\n" +
-                "            <textElement/>\n" +
-                "            <textFieldExpression><![CDATA[$F{age}]]></textFieldExpression>\n" +
-                "         </textField>\n" +
-                "      </band>\n" +
-                "   </detail>\n" +
-                "</jasperReport>";
-
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(reportPath))) {
-            writer.write(defaultJRXML);
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Error al crear el archivo JRXML: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void showReportPreview(JasperPrint jasperPrint) {
-        reportPanel.removeAll();
-
-        JRViewer viewer = new JRViewer(jasperPrint);
-        reportPanel.add(viewer, BorderLayout.CENTER);
-
-        reportPanel.revalidate();
-        reportPanel.repaint();
     }
 
     private static class StyledButton extends JButton {
@@ -191,7 +136,6 @@ public class VistaReportes extends JFrame {
                 public void mouseEntered(java.awt.event.MouseEvent evt) {
                     setBackground(new Color(41, 128, 185));
                 }
-
                 public void mouseExited(java.awt.event.MouseEvent evt) {
                     setBackground(new Color(52, 152, 219));
                 }
