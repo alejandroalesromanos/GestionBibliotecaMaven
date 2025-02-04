@@ -49,7 +49,7 @@ public class VistaUsuarios extends JFrame {
         fondoPanel.add(titleLabel, BorderLayout.NORTH);
 
         // Tabla de usuarios
-        tableModel = new DefaultTableModel(new Object[][]{}, new String[]{"DNI", "Nombre", "Apellidos", "Email", "Teléfono", "Rol"}) {
+        tableModel = new DefaultTableModel(new Object[][]{}, new String[]{"ID", "DNI", "Nombre", "Apellidos", "Email", "Teléfono", "Rol"}) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -107,8 +107,6 @@ public class VistaUsuarios extends JFrame {
             }
         }
 
-      
-
         if (isAdmin) {
             JButton addUserButton = new StyledButton("Añadir Usuario");
             addUserButton.addActionListener(e -> showAddUserForm());
@@ -145,13 +143,15 @@ public class VistaUsuarios extends JFrame {
             tableModel.setRowCount(0); // Limpiar la tabla antes de cargar
 
             while (resultSet.next()) {
-                tableModel.addRow(new Object[] {
-                        resultSet.getString("DNI"),
-                        resultSet.getString("Nombre"),
-                        resultSet.getString("Apellidos"),
-                        resultSet.getString("Email"),
-                        resultSet.getString("Telefono"),
-                        resultSet.getString("Rol")
+                // Añadir una fila con los datos del usuario
+                tableModel.addRow(new Object[]{
+                    resultSet.getInt("ID"), // ID
+                    resultSet.getString("DNI"), // DNI
+                    resultSet.getString("Nombre"), // Nombre
+                    resultSet.getString("Apellidos"), // Apellidos
+                    resultSet.getString("Email"), // Email
+                    resultSet.getString("Telefono"), // Teléfono
+                    resultSet.getString("Rol") // Rol
                 });
             }
         } catch (Exception e) {
@@ -284,19 +284,20 @@ public class VistaUsuarios extends JFrame {
     private void editUser() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione un usuario para editar.", "Advertencia",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Seleccione un usuario para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        int userId = (int) tableModel.getValueAt(selectedRow, 0);
-        String dni = (String) tableModel.getValueAt(selectedRow, 1);
-        String nombre = (String) tableModel.getValueAt(selectedRow, 2);
-        String apellidos = (String) tableModel.getValueAt(selectedRow, 3);
-        String email = (String) tableModel.getValueAt(selectedRow, 4);
-        String telefono = (String) tableModel.getValueAt(selectedRow, 5);
-        String rol = (String) tableModel.getValueAt(selectedRow, 6);
+        // Obtener los valores de la fila seleccionada
+        int userId = (int) tableModel.getValueAt(selectedRow, 0); // ID
+        String dni = (String) tableModel.getValueAt(selectedRow, 1); // DNI
+        String nombre = (String) tableModel.getValueAt(selectedRow, 2); // Nombre
+        String apellidos = (String) tableModel.getValueAt(selectedRow, 3); // Apellidos
+        String email = (String) tableModel.getValueAt(selectedRow, 4); // Email
+        String telefono = (String) tableModel.getValueAt(selectedRow, 5); // Teléfono
+        String rol = (String) tableModel.getValueAt(selectedRow, 6); // Rol
 
+        // Crear el panel de edición
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(new EmptyBorder(10, 10, 10, 10));
         GridBagConstraints gbc = new GridBagConstraints();
@@ -308,7 +309,7 @@ public class VistaUsuarios extends JFrame {
         JTextField apellidosField = new JTextField(apellidos, 20);
         JTextField emailField = new JTextField(email, 20);
         JTextField telefonoField = new JTextField(telefono, 20);
-        JComboBox<String> roleComboBox = new JComboBox<>(new String[]{"Administrador", "Usuario_estándar"});
+        JComboBox<String> roleComboBox = new JComboBox<>(new String[]{"Administrador", "Usuario_estandar"});
         roleComboBox.setSelectedItem(rol);
 
         gbc.gridx = 0;
@@ -347,29 +348,24 @@ public class VistaUsuarios extends JFrame {
         gbc.gridx = 1;
         panel.add(roleComboBox, gbc);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Editar Usuario", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(this, panel, "Editar Usuario", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.OK_OPTION) {
             try (Connection connection = new Db().getConnection();
                  PreparedStatement ps = connection.prepareStatement(
-                         "UPDATE usuarios SET DNI = ?, Nombre = ?, Apellidos = ?, Email = ?, Telefono = ?, Rol = ? WHERE ID = ?")) {
+                         "UPDATE usuarios SET dni = ?, nombre = ?, apellidos = ?, email = ?, telefono = ?, rol = ? WHERE ID = ?")) {
                 ps.setString(1, dniField.getText());
                 ps.setString(2, nombreField.getText());
                 ps.setString(3, apellidosField.getText());
                 ps.setString(4, emailField.getText());
                 ps.setString(5, telefonoField.getText());
                 ps.setString(6, (String) roleComboBox.getSelectedItem());
-                ps.setInt(7, userId);
+                ps.setInt(7, userId); // Usar el ID del usuario
                 ps.executeUpdate();
-                loadUsers();
+                loadUsers(); // Recargar la lista de usuarios después de la edición
                 JOptionPane.showMessageDialog(this, "Usuario editado con éxito.", "Información", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Error al editar usuario: " + e.getMessage(), "Error",
-                        JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al editar usuario: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
-
-
 }
-
