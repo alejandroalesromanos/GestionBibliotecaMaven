@@ -26,7 +26,7 @@ public class Libro {
         Drama,
         Novela,
         Realismo,
-        Distopía
+        Distopía,
     }
 
     @Id 

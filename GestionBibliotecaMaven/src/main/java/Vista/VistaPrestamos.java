@@ -347,7 +347,7 @@ public class VistaPrestamos extends JFrame {
 
 		// Email del usuario
 		JTextField usuarioField = new JTextField(isAdmin ? "" : emailUser);
-		usuarioField.setEditable(!isAdmin);
+		usuarioField.setEditable(isAdmin);
 
 		// Fecha de préstamo
 		JDateChooser fechaPrestamoChooser = new JDateChooser();
